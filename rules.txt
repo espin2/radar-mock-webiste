@@ -1,0 +1,108 @@
+create mock incident dashboard on this folder
+
+radar/mock-website
+
+list database:
+
+CREATE TABLE public.radar_alerts (
+	id bigserial NOT NULL,
+	status varchar(20) NOT NULL,
+	metadata_name varchar(255) NOT NULL,
+	cluster_name varchar(255) NOT NULL,
+	alert_types varchar(50) NOT NULL,
+	service_type varchar(50) NOT NULL,
+	priority varchar(10) NOT NULL,
+	starts_at timestamp NOT NULL,
+	ends_at timestamp NULL,
+	created_at timestamp DEFAULT now() NOT NULL,
+	replicas_available int4 NULL,
+	replicas_desired int4 NULL,
+	threshold_value numeric NULL,
+	cluster_type text NULL,
+	"namespace" text NULL,
+	message_firing text NULL,
+	message_resolved text NULL,
+	resource_free text NULL,
+	resource_request text NULL,
+	resource_usage text NULL,
+	panel_url text NULL,
+	state varchar(10) DEFAULT 'active'::character varying NOT NULL,
+	parent_alert int8 NULL,
+	"path" text NULL,
+);
+
+CREATE TABLE public.radar_incidents (
+	id bigserial NOT NULL,
+	ticket_id int8 NOT NULL,
+	alert_id int8 NOT NULL,
+	priority varchar(10) NOT NULL,
+	"owner" varchar(70) NULL,
+	status varchar(20) NOT NULL,
+	acknowledged_at timestamp NULL,
+	resolved_at timestamp NULL,
+	created_at timestamp DEFAULT now() NOT NULL,
+	updated_at timestamp NULL,
+	"version" int4 DEFAULT 1 NOT NULL,
+	CONSTRAINT radar_incidents_pkey PRIMARY KEY (id),
+	CONSTRAINT radar_incident_alert_fk FOREIGN KEY (alert_id) REFERENCES public.radar_alerts(id) ON DELETE CASCADE,
+	CONSTRAINT radar_incidents_ticket_fk FOREIGN KEY (ticket_id) REFERENCES public.radar_tickets(id) ON DELETE CASCADE
+);
+
+CREATE TABLE public.radar_incident_relations (
+	id bigserial NOT NULL,
+	parent_incident_id int8 NOT NULL,
+	child_incident_id int8 NOT NULL,
+	created_at timestamptz DEFAULT now() NOT NULL,
+	CONSTRAINT radar_incident_relations_pkey PRIMARY KEY (id),
+	CONSTRAINT radar_incident_relations_source_target_uniq UNIQUE (parent_incident_id, child_incident_id),
+	CONSTRAINT radar_incident_relations_source_fk FOREIGN KEY (parent_incident_id) REFERENCES public.radar_incidents(id) ON DELETE CASCADE,
+	CONSTRAINT radar_incident_relations_target_fk FOREIGN KEY (child_incident_id) REFERENCES public.radar_incidents(id) ON DELETE CASCADE
+);
+
+CREATE TABLE public.radar_incident_comments (
+	id bigserial NOT NULL,
+	incident_id int8 NOT NULL,
+	author varchar(70) NOT NULL,
+	"content" text NOT NULL,
+	created_at timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT radar_incident_comments_pkey PRIMARY KEY (id),
+	CONSTRAINT radar_incident_comments_incident_fk FOREIGN KEY (incident_id) REFERENCES public.radar_incidents(id) ON DELETE CASCADE
+);
+
+CREATE TABLE public.radar_event_logs (
+	id uuid DEFAULT gen_random_uuid() NOT NULL,
+	resource varchar(20) NOT NULL,
+	resource_id int8 NOT NULL,
+	event_type varchar(50) NOT NULL,
+	old_value text NULL,
+	new_value text NULL,
+	created_at timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT radar_event_logs_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE public.radar_tickets (
+	id bigserial NOT NULL,
+	alert_id int8 NOT NULL,
+	deduplication_id varchar(255) NOT NULL,
+	incident_id int8 NULL,
+	escalated_at timestamp NULL,
+	escalation_reason text NULL,
+	closure_at timestamp NULL,
+	closure_reason text NULL,
+	priority varchar(10) NOT NULL,
+	status varchar(20) NOT NULL,
+	created_at timestamp DEFAULT now() NOT NULL,
+	updated_at timestamp NULL,
+	"version" int4 DEFAULT 1 NOT NULL,
+	CONSTRAINT radar_tickets_deduplication_unique UNIQUE (deduplication_id),
+	CONSTRAINT radar_tickets_pkey PRIMARY KEY (id),
+	CONSTRAINT radar_tickets_alert_fk FOREIGN KEY (alert_id) REFERENCES public.radar_alerts(id) ON DELETE CASCADE
+);
+
+requirement:
+1. there is analytics graph for MTTA,MTTR, & etc related to ticket & incident, and alert.
+2. UI/UX experience for IT Operations
+3. there is single dashboard to check alert,ticket, and incident by metadata_name (metadata_name like service name). what do you think about this?
+4. there is separate dashboard for alert by service_name, incident, and ticket. what do you think?
+
+this is for mock & sample demo. use anything language. i can run it with npm
